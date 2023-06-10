@@ -1,3 +1,4 @@
+from __future__ import annotations
 """This module defines an abstract class for models"""
 
 from dataclasses import dataclass
