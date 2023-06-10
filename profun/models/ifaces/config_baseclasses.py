@@ -2,11 +2,11 @@
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Union, Optional
+from typing import Union
 
 import yaml  # type: ignore
 
-from utils.project_info import ExperimentInfo
+from profun.utils.project_info import ExperimentInfo
 
 
 @dataclass

@@ -1,6 +1,6 @@
 """This module implements metrics computation"""
 
-from models.ifaces import BaseModel
+from profun.models.ifaces import BaseModel
 
 import numpy as np  # type: ignore
 import pandas as pd

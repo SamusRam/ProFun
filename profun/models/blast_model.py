@@ -10,7 +10,7 @@ from typing import Type
 import numpy as np
 import pandas as pd
 
-from models.ifaces import BaseConfig, BaseModel
+from profun.models.ifaces import BaseConfig, BaseModel
 
 logging.basicConfig()
 logging.root.setLevel(logging.NOTSET)

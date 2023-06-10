@@ -17,9 +17,9 @@ from skopt import gp_minimize  # type: ignore
 from skopt.space import Categorical, Integer, Real  # type: ignore
 from skopt.utils import use_named_args  # type: ignore
 
-from evaluation.metrics import eval_model_mean_average_precision
-from models.ifaces.config_baseclasses import BaseConfig
-from utils.project_info import get_output_root
+from profun.evaluation.metrics import eval_model_mean_average_precision
+from profun.models.ifaces.config_baseclasses import BaseConfig
+from profun.utils.project_info import get_output_root
 import logging
 
 logging.basicConfig()
