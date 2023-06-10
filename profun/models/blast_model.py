@@ -107,39 +107,26 @@ class BlastMatching(BaseModel):
         ), "Expected input to predict_proba without duplicated ids"
         output_path = self._predict(val_df, self.db_path)
         blast_results_df = pd.read_csv(
-            output_path, names=[self.config.id_col_name, "Matched ID"] + list(range(10))
+            output_path, names=[f"{self.config.id_col_name}_blasted", "Matched ID"] + list(range(10))
         )
-
-        raw_agg_predictions = (
-            blast_results_df.merge(
-                self.train_df[[self.config.id_col_name, self.config.target_col_name]],
-                left_on="Matched ID",
-                right_on=self.config.id_col_name,
-                copy=False,
-            )
-                .groupby(self.config.id_col_name)[self.config.target_col_name]
-                .agg(lambda x: Counter(x).most_common())
-                .reset_index()
+        blasted_merged_with_train_df = blast_results_df.merge(
+            self.train_df[[self.config.id_col_name, self.config.target_col_name]],
+            left_on="Matched ID",
+            right_on=self.config.id_col_name,
+            copy=False,
         )
-        raw_agg_predictions.columns = [self.config.id_col_name, "raw pred"]
-        raw_agg_predictions = raw_agg_predictions.merge(
-            val_df, on=self.config.id_col_name, how="right"
-        ).set_index(self.config.id_col_name)
-        # ensuring the same order of rows
-        raw_agg_predictions = raw_agg_predictions.loc[val_df[self.config.id_col_name]]
+        label_and_nn_counts = (blasted_merged_with_train_df
+                               .groupby(f"{self.config.id_col_name}_blasted")[
+                                   [self.config.target_col_name, "Matched ID"]]
+                               .agg(
+            {self.config.target_col_name: lambda x: [Counter(x)], "Matched ID": lambda x: [len(set(x))]})
+                               .reset_index()
+                               )
+        label_and_nn_counts['prediction_dict'] = (
+                label_and_nn_counts['target'] + label_and_nn_counts['Matched ID']).map(
+            lambda x: {class_name: class_count / x[1] for class_name, class_count in x[0].items()})
 
-        def get_predictions(raw_pred):
-            if not isinstance(raw_pred, list):
-                return {"Unknown": 1.0}
-            class_2_probs = dict()
-            total_count = sum(map(lambda x: x[1], raw_pred))
-            for class_name, count in raw_pred:
-                class_2_probs[class_name] = count / total_count
-            return class_2_probs
-
-        class_2_probs_series = raw_agg_predictions["raw pred"].map(
-            lambda x: get_predictions(x)
-        )
+        class_2_probs_series = label_and_nn_counts['prediction_dict']
         val_proba_np = np.zeros((len(val_df), len(self.config.class_names)))
         for class_i, class_name in enumerate(self.config.class_names):
             val_proba_np[:, class_i] = class_2_probs_series.map(
