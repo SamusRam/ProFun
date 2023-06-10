@@ -1,7 +1,5 @@
 """This module implements metrics computation"""
 
-from profun.models.ifaces import BaseModel
-
 import numpy as np  # type: ignore
 import pandas as pd
 from sklearn.metrics import average_precision_score, recall_score  # type: ignore
@@ -13,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 def eval_model_mean_average_precision(
-    model: BaseModel, val_df: pd.DataFrame, selected_class_name: str = None
+    model, val_df: pd.DataFrame, selected_class_name: str = None
 ):
     id_col_name = model.config.id_col_name
     val_df_unique = val_df.drop_duplicates(subset=id_col_name)
