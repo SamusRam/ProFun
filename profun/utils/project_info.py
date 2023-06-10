@@ -31,11 +31,11 @@ class ExperimentInfo:
         self._fold = value
 
     @property
-    def model_type(self):
+    def model(self):
         return self.model_type
 
-    @model_type.setter
-    def model_type(self, value: str):
+    @model.setter
+    def model(self, value: str):
         self.model_type = value
 
     def get_experiment_name(self):

@@ -37,7 +37,7 @@ class BaseModel(ABC, BaseEstimator):
         self.config = config
         assert isinstance(self.config.experiment_info.timestamp, datetime)
         if self.config.experiment_info.model_type is None:
-            self.config.experiment_info.model_type = self.__class__.__name__
+            self.config.experiment_info.model = self.__class__.__name__
         self.output_root = (
             get_output_root()
             / config.experiment_info.model_type
