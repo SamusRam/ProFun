@@ -10,4 +10,8 @@ setup(
     zip_safe=True,
     include_package_data=True,
     packages=find_packages(),
+    install_requires=['pandas', 'numpy', 'dataclasses_json', 'scikit-learn',
+                      'iterstrat', 'scikit-optimize'],
+      author='Raman Samusevich',
+      author_email='raman.samusevich@gmail.com'
     )
