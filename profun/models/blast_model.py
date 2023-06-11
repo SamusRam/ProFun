@@ -5,7 +5,7 @@ import sys
 from collections import Counter
 from dataclasses import dataclass
 from shutil import rmtree
-from typing import Type
+from typing import Type, Optional
 
 import numpy as np
 import pandas as pd
@@ -25,6 +25,7 @@ class BlastConfig(BaseConfig):
 
     n_neighbours: int
     e_threshold: float
+    n_jobs: Optional[int] = 20
 
 
 class BlastMatching(BaseModel):
@@ -42,6 +43,7 @@ class BlastMatching(BaseModel):
         os.makedirs(self.working_directory)
         self.n_neighbours = config.n_neighbours
         self.e_threshold = config.e_threshold
+        self.n_jobs = config.n_jobs
         self.db_path = None
         self.train_df = None
 
@@ -86,7 +88,7 @@ class BlastMatching(BaseModel):
             f.writelines(test_fasta.replace("'", "").replace('"', ""))
 
         os.system(
-            f"blastp -db {db_name} -evalue {self.e_threshold} -query {self.working_directory}/_test.fasta -out {self.working_directory}/results_raw.csv -max_target_seqs {self.n_neighbours} -outfmt 10 -num_threads 20"
+            f"blastp -db {db_name} -evalue {self.e_threshold} -query {self.working_directory}/_test.fasta -out {self.working_directory}/results_raw.csv -max_target_seqs {self.n_neighbours} -outfmt 10 -num_threads {self.n_jobs}"
         )
         os.remove(f"{self.working_directory}/_test.fasta")
         return f"{self.working_directory}/results_raw.csv"
