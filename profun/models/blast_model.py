@@ -125,7 +125,7 @@ class BlastMatching(BaseModel):
                                .reset_index()
                                )
         label_and_nn_counts['prediction_dict'] = (
-                label_and_nn_counts['target'] + label_and_nn_counts['Matched ID']).map(
+                label_and_nn_counts[self.config.target_col_name] + label_and_nn_counts['Matched ID']).map(
             lambda x: {class_name: class_count / x[1] for class_name, class_count in x[0].items()})
 
         class_2_probs_series = label_and_nn_counts['prediction_dict']
