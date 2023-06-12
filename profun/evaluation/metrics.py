@@ -45,7 +45,7 @@ def eval_model_mean_average_precision(
                 raise NotImplementedError(f"Unexpected type {type(class_weights)} for the class_weight parameter.")
             ap_weighted = class_weight*ap
             average_precisions.append(ap_weighted)
-            weights_sum += weights_sum
+            weights_sum += class_weight
             logger.info(f"{class_name}: ap = {ap:.3f}, weighted ap = {ap_weighted: .3f}")
 
     return 1 - np.sum(average_precisions)/weights_sum
