@@ -86,7 +86,7 @@ class BlastMatching(BaseModel):
         with open(f"{self.working_directory}/_test.fasta", "w") as f:
             f.writelines(test_fasta.replace("'", "").replace('"', ""))
         if os.path.exists(f"{self.working_directory}/results_raw.csv"):
-            os.remove(f"{self.working_directory}/results_raw.fasta")
+            os.remove(f"{self.working_directory}/results_raw.csv")
         os.system(
             f"blastp -db {db_name} -evalue {self.config.e_threshold} -query {self.working_directory}/_test.fasta -out {self.working_directory}/results_raw.csv -max_target_seqs {self.config.n_neighbours} -outfmt 10 -num_threads {self.config.n_jobs}"
         )
