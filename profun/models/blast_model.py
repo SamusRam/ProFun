@@ -132,15 +132,10 @@ class BlastMatching(BaseModel):
             label_and_nn_counts['prediction_dict'] = (
                     label_and_nn_counts[self.config.target_col_name] + label_and_nn_counts['Matched ID']).map(
                 lambda x: {class_name: class_count / x[1] for class_name, class_count in x[0].items()})
-
-            print(label_and_nn_counts.head())
-            print(val_df_batch.head())
-            print(label_and_nn_counts.dtypes)
-            print(val_df_batch.dtypes)
             label_and_nn_counts = label_and_nn_counts.merge(
                 val_df_batch, left_on=f"{self.config.id_col_name}_blasted",
-                right_on=self.config.id_col_name, how="right", right_index=True
-            ).set_index(self.config.id_col_name)
+                right_on=self.config.id_col_name, how="right"
+            )
             class_2_probs_series = label_and_nn_counts['prediction_dict']
             val_proba_np_batch = np.zeros((len(val_df_batch), len(self.config.class_names)))
             for class_i, class_name in enumerate(self.config.class_names):
