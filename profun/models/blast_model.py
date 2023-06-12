@@ -43,9 +43,6 @@ class BlastMatching(BaseModel):
         if os.path.exists(self.working_directory):
             rmtree(self.working_directory)
         os.makedirs(self.working_directory)
-        self.n_neighbours = config.n_neighbours
-        self.e_threshold = config.e_threshold
-        self.n_jobs = config.n_jobs
         self.db_path = None
         self.train_df = None
 
@@ -91,7 +88,7 @@ class BlastMatching(BaseModel):
         if os.path.exists(f"{self.working_directory}/results_raw.csv"):
             os.remove(f"{self.working_directory}/results_raw.fasta")
         os.system(
-            f"blastp -db {db_name} -evalue {self.e_threshold} -query {self.working_directory}/_test.fasta -out {self.working_directory}/results_raw.csv -max_target_seqs {self.n_neighbours} -outfmt 10 -num_threads {self.n_jobs}"
+            f"blastp -db {db_name} -evalue {self.config.e_threshold} -query {self.working_directory}/_test.fasta -out {self.working_directory}/results_raw.csv -max_target_seqs {self.config.n_neighbours} -outfmt 10 -num_threads {self.config.n_jobs}"
         )
         os.remove(f"{self.working_directory}/_test.fasta")
         return f"{self.working_directory}/results_raw.csv"
@@ -146,6 +143,7 @@ class BlastMatching(BaseModel):
                 val_proba_np_batch[:, class_i] = class_2_probs_series.map(
                     lambda x: x[class_name] if isinstance(x, dict) and class_name in x else 0
                 )
+            print(label_and_nn_counts.columns)
             indices_batch = label_and_nn_counts[self.config.id_col_name].values
             orig_val_2_ord = {value: i for i, value in enumerate(val_df_batch[self.config.id_col_name])}
             order_of_predictions_in_orig_batch = sorted(range(len(indices_batch)),
