@@ -135,7 +135,7 @@ class BlastMatching(BaseModel):
 
             label_and_nn_counts = label_and_nn_counts.merge(
                 val_df_batch, left_on=f"{self.config.id_col_name}_blasted",
-                right_on=self.config.id_col_name, how="right"
+                right_on=self.config.id_col_name, how="right", right_index=True
             ).set_index(self.config.id_col_name)
             class_2_probs_series = label_and_nn_counts['prediction_dict']
             val_proba_np_batch = np.zeros((len(val_df_batch), len(self.config.class_names)))
@@ -143,7 +143,7 @@ class BlastMatching(BaseModel):
                 val_proba_np_batch[:, class_i] = class_2_probs_series.map(
                     lambda x: x[class_name] if isinstance(x, dict) and class_name in x else 0
                 )
-            indices_batch = label_and_nn_counts[f"{self.config.id_col_name}_blasted"].values
+            indices_batch = label_and_nn_counts[self.config.id_col_name].values
             orig_val_2_ord = {value: i for i, value in enumerate(val_df_batch[self.config.id_col_name])}
             order_of_predictions_in_orig_batch = sorted(range(len(indices_batch)),
                                                         key=lambda idx: orig_val_2_ord[indices_batch[idx]])
