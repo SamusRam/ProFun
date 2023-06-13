@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import os
 import subprocess
@@ -103,11 +105,14 @@ class BlastMatching(BaseModel):
             self.train_df = train_df.copy()
             self.db_path = self._train(train_df.drop_duplicates(subset=[self.config.id_col_name]))
 
-    def predict_proba(self, val_df: pd.DataFrame) -> np.ndarray:
+    def predict_proba(self, val_df: pd.DataFrame, return_long_df: bool = False) -> [np.ndarray | pd.DataFrame]:
         assert val_df[self.config.id_col_name].nunique() == len(
             val_df
         ), "Expected input to predict_proba without duplicated ids"
-        all_predicted_batches = []
+        if return_long_df:
+            predicted_ids, predicted_classes, predicted_probs = [], [], []
+        else:
+            all_predicted_batches = []
         for batch_i in tqdm(range(len(val_df) // self.config.pred_batch_size + 1),
                             desc='Predicting with BLASTp-matching..'):
             val_df_batch = val_df.iloc[
@@ -136,17 +141,27 @@ class BlastMatching(BaseModel):
                 val_df_batch, left_on=f"{self.config.id_col_name}_blasted",
                 right_on=self.config.id_col_name, how="right"
             )
-            class_2_probs_series = label_and_nn_counts['prediction_dict']
-            val_proba_np_batch = np.zeros((len(val_df_batch), len(self.config.class_names)))
-            for class_i, class_name in enumerate(self.config.class_names):
-                val_proba_np_batch[:, class_i] = class_2_probs_series.map(
-                    lambda x: x[class_name] if isinstance(x, dict) and class_name in x else 0
-                )
-            indices_batch = label_and_nn_counts[self.config.id_col_name].values
-            orig_val_2_ord = {value: i for i, value in enumerate(val_df_batch[self.config.id_col_name])}
-            order_of_predictions_in_orig_batch = sorted(range(len(indices_batch)),
-                                                        key=lambda idx: orig_val_2_ord[indices_batch[idx]])
-            all_predicted_batches.append(val_proba_np_batch[order_of_predictions_in_orig_batch])
+            if return_long_df:
+                for _, row in label_and_nn_counts.iterrows():
+                    for class_name, class_prob in row['prediction_dict'].items():
+                        predicted_ids.append(row[self.config.id_col_name])
+                        predicted_classes.append(class_name)
+                        predicted_probs.append(class_prob)
+            else:
+                val_proba_np_batch = np.zeros((len(val_df_batch), len(self.config.class_names)))
+                for class_i, class_name in enumerate(self.config.class_names):
+                    val_proba_np_batch[:, class_i] = label_and_nn_counts['prediction_dict'].map(
+                        lambda x: x[class_name] if isinstance(x, dict) and class_name in x else 0
+                    )
+                indices_batch = label_and_nn_counts[self.config.id_col_name].values
+                orig_val_2_ord = {value: i for i, value in enumerate(val_df_batch[self.config.id_col_name])}
+                order_of_predictions_in_orig_batch = sorted(range(len(indices_batch)),
+                                                            key=lambda idx: orig_val_2_ord[indices_batch[idx]])
+                all_predicted_batches.append(val_proba_np_batch[order_of_predictions_in_orig_batch])
+        if return_long_df:
+            return pd.DataFrame({self.config.id_col_name: predicted_ids,
+                                 self.config.target_col_name: predicted_classes,
+                                 "probability": predicted_probs})
         val_proba_np = all_predicted_batches[0] if len(all_predicted_batches) == 1 else np.concatenate(
             all_predicted_batches)
         return val_proba_np

@@ -1,4 +1,6 @@
 """This module defines an abstract class for models"""
+from __future__ import annotations
+
 import inspect
 import json
 import os
@@ -130,11 +132,12 @@ class BaseModel(ABC, BaseEstimator):
             self.fit_core(train_df)
 
     @abstractmethod
-    def predict_proba(self, val_df: pd.DataFrame) -> np.ndarray:
+    def predict_proba(self, val_df: pd.DataFrame, return_long_df: bool = False) -> [np.ndarray | pd.DataFrame]:
         """
         Model predict method
         :param val_df: pandas dataframe containing instances to score the model on
-        :returns numpy array containing predicted class probabilities
+        :param return_long_df: flag to return predictions in a long format dataframe with columns [id, target_class, prob]
+        :returns predicted class probabilities either as wide numpy array or long pandas dataframe
         """
         raise NotImplementedError
 
