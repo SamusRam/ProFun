@@ -143,10 +143,11 @@ class BlastMatching(BaseModel):
             )
             if return_long_df:
                 for _, row in label_and_nn_counts.iterrows():
-                    for class_name, class_prob in row['prediction_dict'].items():
-                        predicted_ids.append(row[self.config.id_col_name])
-                        predicted_classes.append(class_name)
-                        predicted_probs.append(class_prob)
+                    if isinstance(row['prediction_dict'], dict):
+                        for class_name, class_prob in row['prediction_dict'].items():
+                            predicted_ids.append(row[self.config.id_col_name])
+                            predicted_classes.append(class_name)
+                            predicted_probs.append(class_prob)
             else:
                 val_proba_np_batch = np.zeros((len(val_df_batch), len(self.config.class_names)))
                 for class_i, class_name in enumerate(self.config.class_names):
