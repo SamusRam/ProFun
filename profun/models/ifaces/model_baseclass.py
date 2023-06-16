@@ -68,6 +68,7 @@ class BaseModel(ABC, BaseEstimator):
         """
         raise NotImplementedError
 
+    # TODO: add proper map metric to hyperparam tuning
     def fit(self, train_df: pd.DataFrame):
         """
         Fit function

@@ -99,6 +99,7 @@ class BlastMatching(BaseModel):
         train_df.drop_duplicates(
             subset=[self.config.id_col_name, self.config.target_col_name], inplace=True
         )
+        # TODO: fix pd.DataFrame comparisons
         if (self.db_path is None or
                 self.train_df[[self.config.id_col_name, self.config.target_col_name]] != train_df[
                     [self.config.id_col_name, self.config.target_col_name]]):
