@@ -107,7 +107,7 @@ class ProfileHMM(BaseModel):
 
         model_id = str(uuid.uuid4())
         generate_msa_mafft(fasta_str=fasta_str,
-                           output_name=f"{model_id}_msa.out",
+                           output_name=f"{self.working_directory}/{model_id}_msa.out",
                            n_jobs=self.config.n_jobs,
                            clustal_output_format=True)
         os.system(
