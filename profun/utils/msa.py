@@ -32,7 +32,8 @@ def generate_msa_mafft(*, seqs: Optional[Iterable[str]] = None, ids: Iterable[st
     assert fasta_str is None or seqs is None, ("The input sequences must be passed either as an iterable of strings or "
                                                "as the preprocessed fasta_str, "
                                                "but cannot be passed by both options simultaneously")
-    fasta_str = get_fasta_seqs(seqs, ids)
+    if fasta_str is None:
+        fasta_str = get_fasta_seqs(seqs, ids)
     with open("_temp_mafft.fasta", "w", encoding="utf8") as f:
         f.writelines(fasta_str.replace("'", "").replace('"', ""))
     os.system(
