@@ -42,7 +42,7 @@ class ExperimentInfo:
         """Detailed experiment name getter"""
         experiment_name = (
             f"validation_{self.validation_schema}__model_{self.model_type}_{self.model_version}_"
-            f'{self.timestamp.strftime("%Y%m%d-%H%M%S")}'
+            f'{self.timestamp.strftime("%Y%m%d-%H%M")}'
         )
         return experiment_name
 
@@ -51,7 +51,7 @@ def get_project_root() -> Path:
     """
     Returns: absolute path to the project root directory
     """
-    return Path.home() / "profun_outputs"
+    return Path.home() / "profun_outs"
 
 
 def get_output_root() -> Path:

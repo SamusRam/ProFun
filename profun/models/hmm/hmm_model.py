@@ -57,7 +57,7 @@ class ProfileHMM(BaseModel):
             config=config,
         )
         self.config = config
-        self.working_directory = self.output_root / "_working_directory"
+        self.working_directory = self.output_root / "_out"
         if os.path.exists(self.working_directory):
             rmtree(self.working_directory)
         os.makedirs(self.working_directory)
