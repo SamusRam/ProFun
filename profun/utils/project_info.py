@@ -51,7 +51,7 @@ def get_project_root() -> Path:
     """
     Returns: absolute path to the project root directory
     """
-    return Path(__file__).parent.parent.parent
+    return Path.home() / "profun_outputs"
 
 
 def get_output_root() -> Path:
