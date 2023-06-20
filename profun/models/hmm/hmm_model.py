@@ -1,7 +1,6 @@
 """This class implements profile Hidden Markov model"""
 from __future__ import annotations
 
-
 import logging
 import os
 import pickle
@@ -12,13 +11,14 @@ from typing import Dict, List, Type
 
 import numpy as np
 import pandas as pd  # type: ignore
+from tqdm.auto import tqdm
 
 from profun.models.ifaces import BaseModel
 from profun.utils.msa import get_fasta_seqs, generate_msa_mafft
 from .hmm_dataclasses import HmmConfig, HmmPrediction
 
 logging.basicConfig()
-logging.root.setLevel(logging.NOTSET)
+logging.root.setLevel(logging.INFO)
 logger = logging.getLogger(__name__)
 
 
@@ -144,7 +144,7 @@ class ProfileHMM(BaseModel):
         return f"{self.working_directory}/_{result_id}.tbl"
 
     def aggregate_predictions(self, class_name_2_pred_path: Dict[tuple[str, str], str], do_major_class_agg: bool = False
-    ) -> pd.DataFrame:
+                              ) -> pd.DataFrame:
         """
         The function aggregates prediction analogously to Terzyme algorithm https://link.springer.com/article/10.1186/s13007-017-0269-0 if do_major_class_agg == True
         :return: a dataframe with predictions
@@ -218,7 +218,7 @@ class ProfileHMM(BaseModel):
             if sum(
                 (train_df[self.config.target_col_name] == class_name)
                 & (train_df[self.config.group_column_name] == kingdom)
-            ) >= 2
+            ) > 2
         }
         with open(
                 f"{self.working_directory}/class_name_2_path_to_model_paths.pkl",
@@ -226,7 +226,7 @@ class ProfileHMM(BaseModel):
         ) as file:
             pickle.dump(self.class_name_2_path_to_model_paths, file)
 
-    def predict_proba(self, val_df: pd.DataFrame, return_long_df: bool = False) -> np.ndarray:
+    def predict_proba(self, val_df: pd.DataFrame, return_long_df: bool = False) -> np.ndarray | pd.DataFrame:
         if self.config.group_column_name is None:
             val_df[self.config.group_column_name] = "all"
         assert val_df[self.config.id_col_name].nunique() == len(
@@ -239,36 +239,46 @@ class ProfileHMM(BaseModel):
         assert (
                 self.config.class_names is not None
         ), "Class names were not derived and stored during training"
-        class_name_2_pred_path = {
-            (class_name, kingdom): self.predict_for_class_group(
-                val_df, class_name, kingdom
-            )
-            for class_name in self.config.class_names
-            for kingdom in self.class_2_groups[class_name]
-            if (class_name, kingdom) in self.class_name_2_path_to_model_paths
-        }
-        pred_df = self.aggregate_predictions(class_name_2_pred_path)
-        pred_df = pred_df.merge(val_df, on=self.config.id_col_name, how="right").set_index(
-            self.config.id_col_name
-        )
-        pred_df = pred_df.loc[val_df[self.config.id_col_name]].reset_index()
-        pred_df["probability"] = pred_df["E"]
-        pred_df.loc[
-            pred_df["probability"] > self.config.zero_conf_level, "probability"
-        ] = self.config.zero_conf_level
-        pred_df["probability"] /= self.config.zero_conf_level
-        pred_df.loc[pred_df["probability"].isnull(), "probability"] = 1
-        pred_df["probability"] = 1 - pred_df["probability"]
+        batch_results = []
+        for batch_i in tqdm(range(len(val_df) // self.config.pred_batch_size + 1),
+                            desc='Predicting with BLASTp-matching..'):
+            val_df_batch = val_df.iloc[
+                           batch_i * self.config.pred_batch_size: (batch_i + 1) * self.config.pred_batch_size]
 
+            class_name_2_pred_path = {
+                (class_name, kingdom): self.predict_for_class_group(
+                    val_df_batch, class_name, kingdom
+                )
+                for class_name in self.config.class_names
+                for kingdom in self.class_2_groups[class_name]
+                if (class_name, kingdom) in self.class_name_2_path_to_model_paths
+            }
+            pred_df = self.aggregate_predictions(class_name_2_pred_path)
+            pred_df = pred_df.merge(val_df, on=self.config.id_col_name, how="right").set_index(
+                self.config.id_col_name
+            )
+            pred_df = pred_df.loc[val_df[self.config.id_col_name]].reset_index()
+            pred_df["probability"] = pred_df["E"]
+            pred_df.loc[
+                pred_df["probability"] > self.config.zero_conf_level, "probability"
+            ] = self.config.zero_conf_level
+            pred_df["probability"] /= self.config.zero_conf_level
+            pred_df.loc[pred_df["probability"].isnull(), "probability"] = 1
+            pred_df["probability"] = 1 - pred_df["probability"]
+
+            if return_long_df:
+                batch_results.append(pred_df[[self.config.id_col_name,
+                                              self.config.target_col_name,
+                                              "probability"]])
+            else:
+                val_proba_np = np.zeros((len(val_df), len(self.config.class_names)))
+                for class_i, class_name in enumerate(self.config.class_names):
+                    bool_idx = (pred_df[self.config.target_col_name] == class_name).values
+                    val_proba_np[bool_idx, class_i] = pred_df.loc[bool_idx, "probability"]
+                batch_results.append(val_proba_np)
         if return_long_df:
-            return pred_df[[self.config.id_col_name,
-                            self.config.target_col_name,
-                            "probability"]]
-        val_proba_np = np.zeros((len(val_df), len(self.config.class_names)))
-        for class_i, class_name in enumerate(self.config.class_names):
-            bool_idx = (pred_df[self.config.target_col_name] == class_name).values
-            val_proba_np[bool_idx, class_i] = pred_df.loc[bool_idx, "probability"]
-        return val_proba_np
+            return pd.concat(batch_results)
+        return np.concatenate(batch_results)
 
     @classmethod
     def config_class(cls) -> Type[HmmConfig]:
