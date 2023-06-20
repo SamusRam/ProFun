@@ -110,6 +110,11 @@ class ProfileHMM(BaseModel):
                            output_name=f"{self.working_directory}/{model_id}_msa.out",
                            n_jobs=self.config.n_jobs,
                            clustal_output_format=False)
+        # check number of lines in the msa file
+        with open(f"{self.working_directory}/{model_id}_msa.out", "r") as file:
+            msa_lines = file.readlines()
+        if len(msa_lines) == 0:
+            raise ValueError("Empty MSA file")
         os.system(
             f"hmmbuild {self.working_directory}/{model_id}.hmm {self.working_directory}/{model_id}_msa.out"
         )
@@ -209,17 +214,19 @@ class ProfileHMM(BaseModel):
             ].unique()
             for class_name in self.config.class_names
         }
-        self.class_name_2_path_to_model_paths = {
-            (class_name, kingdom): self._train_for_class_group(
-                train_df, class_name=class_name, group_name=kingdom
-            )
-            for class_name in self.config.class_names
-            for kingdom in self.class_2_groups[class_name]
-            if sum(
-                (train_df[self.config.target_col_name] == class_name)
-                & (train_df[self.config.group_column_name] == kingdom)
-            ) > 2
-        }
+        self.class_name_2_path_to_model_paths = dict()
+        for class_name in self.config.class_names:
+            for kingdom in self.class_2_groups[class_name]:
+                if sum(
+                        (train_df[self.config.target_col_name] == class_name)
+                        & (train_df[self.config.group_column_name] == kingdom)
+                ) >= 2:
+                    try:
+                        self.class_name_2_path_to_model_paths[(class_name, kingdom)] = self._train_for_class_group(
+                            train_df, class_name=class_name, group_name=kingdom)
+                    except ValueError:
+                        continue
+
         with open(
                 f"{self.working_directory}/class_name_2_path_to_model_paths.pkl",
                 "wb",
