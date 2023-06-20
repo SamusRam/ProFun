@@ -17,7 +17,7 @@ class HmmConfig(BaseConfig):
     zero_conf_level: float
     group_column_name: Optional[str] = None
     n_jobs: Optional[int] = 56
-    pred_batch_size: Optional[int] = 100
+    pred_batch_size: Optional[int] = 10000
 
 
 @total_ordering
