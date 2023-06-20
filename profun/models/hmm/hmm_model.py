@@ -248,7 +248,7 @@ class ProfileHMM(BaseModel):
         ), "Class names were not derived and stored during training"
         batch_results = []
         for batch_i in tqdm(range(len(val_df) // self.config.pred_batch_size + 1),
-                            desc='Predicting with BLASTp-matching..'):
+                            desc='Predicting with Profile HMM..'):
             val_df_batch = val_df.iloc[
                            batch_i * self.config.pred_batch_size: (batch_i + 1) * self.config.pred_batch_size]
 
