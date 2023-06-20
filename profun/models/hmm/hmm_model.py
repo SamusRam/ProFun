@@ -109,7 +109,7 @@ class ProfileHMM(BaseModel):
         generate_msa_mafft(fasta_str=fasta_str,
                            output_name=f"{self.working_directory}/{model_id}_msa.out",
                            n_jobs=self.config.n_jobs,
-                           clustal_output_format=True)
+                           clustal_output_format=False)
         os.system(
             f"hmmbuild {self.working_directory}/{model_id}.hmm {self.working_directory}/{model_id}_msa.out"
         )
@@ -132,7 +132,7 @@ class ProfileHMM(BaseModel):
         ) as file:
             file.writelines(test_fasta.replace("'", "").replace('"', ""))
 
-        # logger.info(f'Predicting for class {class_name}, fasta size: {len(test_fasta.split(">"))}')
+        logger.info(f'Predicting for class {class_name}, fasta size: {len(test_fasta.split(">"))}')
 
         result_id = str(uuid.uuid4())
         assert (
@@ -178,7 +178,9 @@ class ProfileHMM(BaseModel):
             y_pred_list.append(prediction.prediction_label)
 
         predictions_df = pd.DataFrame(
-            {self.config.id_col_name: ids_list, "Pred": y_pred_list, "E": e_val_list}
+            {self.config.id_col_name: ids_list,
+             self.config.target_col_name: y_pred_list,
+             "E": e_val_list}
         )
         return predictions_df
 
@@ -227,13 +229,13 @@ class ProfileHMM(BaseModel):
     def predict_proba(self, val_df: pd.DataFrame, return_long_df: bool = False) -> np.ndarray:
         if self.config.group_column_name is None:
             val_df[self.config.group_column_name] = "all"
-        assert val_df["Uniprot ID"].nunique() == len(
+        assert val_df[self.config.id_col_name].nunique() == len(
             val_df
         ), "Expected input to predict_proba without duplicated ids"
         logger.info("Val size: %d", len(val_df))
         assert (
                 self.class_name_2_path_to_model_paths is not None
-        ), "Predicting before training the Terzyme model"
+        ), "Predicting before training the HMM model"
         assert (
                 self.config.class_names is not None
         ), "Class names were not derived and stored during training"
@@ -246,22 +248,26 @@ class ProfileHMM(BaseModel):
             if (class_name, kingdom) in self.class_name_2_path_to_model_paths
         }
         pred_df = self.aggregate_predictions(class_name_2_pred_path)
-        pred_df = pred_df.merge(val_df, on="Uniprot ID", how="right").set_index(
-            "Uniprot ID"
+        pred_df = pred_df.merge(val_df, on=self.config.id_col_name, how="right").set_index(
+            self.config.id_col_name
         )
-        pred_df = pred_df.loc[val_df["Uniprot ID"]]
-        pred_df["conf"] = pred_df["E"]
+        pred_df = pred_df.loc[val_df[self.config.id_col_name]].reset_index()
+        pred_df["probability"] = pred_df["E"]
         pred_df.loc[
-            pred_df["conf"] > self.config.zero_conf_level, "conf"
+            pred_df["probability"] > self.config.zero_conf_level, "probability"
         ] = self.config.zero_conf_level
-        pred_df["conf"] /= self.config.zero_conf_level
-        pred_df.loc[pred_df["conf"].isnull(), "conf"] = 1
-        pred_df["conf"] = 1 - pred_df["conf"]
+        pred_df["probability"] /= self.config.zero_conf_level
+        pred_df.loc[pred_df["probability"].isnull(), "probability"] = 1
+        pred_df["probability"] = 1 - pred_df["probability"]
 
+        if return_long_df:
+            return pred_df[[self.config.id_col_name,
+                            self.config.target_col_name,
+                            "probability"]]
         val_proba_np = np.zeros((len(val_df), len(self.config.class_names)))
         for class_i, class_name in enumerate(self.config.class_names):
-            bool_idx = (pred_df["Pred"] == class_name).values
-            val_proba_np[bool_idx, class_i] = pred_df.loc[bool_idx, "conf"]
+            bool_idx = (pred_df[self.config.target_col_name] == class_name).values
+            val_proba_np[bool_idx, class_i] = pred_df.loc[bool_idx, "probability"]
         return val_proba_np
 
     @classmethod
