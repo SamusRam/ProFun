@@ -274,9 +274,10 @@ class ProfileHMM(BaseModel):
             pred_df["probability"] = 1 - pred_df["probability"]
 
             if return_long_df:
-                batch_results.append(pred_df[[self.config.id_col_name,
-                                              self.config.target_col_name,
-                                              "probability"]])
+                batch_results.append(pred_df.loc[~pred_df[self.config.target_col_name],
+                                                 [self.config.id_col_name,
+                                                  self.config.target_col_name,
+                                                  "probability"]])
             else:
                 val_proba_np = np.zeros((len(val_df), len(self.config.class_names)))
                 for class_i, class_name in enumerate(self.config.class_names):
