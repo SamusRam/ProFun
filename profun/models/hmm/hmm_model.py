@@ -251,39 +251,39 @@ class ProfileHMM(BaseModel):
                             desc='Predicting with Profile HMM..'):
             val_df_batch = val_df.iloc[
                            batch_i * self.config.pred_batch_size: (batch_i + 1) * self.config.pred_batch_size]
-
-            class_name_2_pred_path = {
-                (class_name, kingdom): self.predict_for_class_group(
-                    val_df_batch, class_name, kingdom
+            if len(val_df_batch):
+                class_name_2_pred_path = {
+                    (class_name, kingdom): self.predict_for_class_group(
+                        val_df_batch, class_name, kingdom
+                    )
+                    for class_name in self.config.class_names
+                    for kingdom in self.class_2_groups[class_name]
+                    if (class_name, kingdom) in self.class_name_2_path_to_model_paths
+                }
+                pred_df = self.aggregate_predictions(class_name_2_pred_path)
+                pred_df = pred_df.merge(val_df, on=self.config.id_col_name, how="right").set_index(
+                    self.config.id_col_name
                 )
-                for class_name in self.config.class_names
-                for kingdom in self.class_2_groups[class_name]
-                if (class_name, kingdom) in self.class_name_2_path_to_model_paths
-            }
-            pred_df = self.aggregate_predictions(class_name_2_pred_path)
-            pred_df = pred_df.merge(val_df, on=self.config.id_col_name, how="right").set_index(
-                self.config.id_col_name
-            )
-            pred_df = pred_df.loc[val_df[self.config.id_col_name]].reset_index()
-            pred_df["probability"] = pred_df["E"]
-            pred_df.loc[
-                pred_df["probability"] > self.config.zero_conf_level, "probability"
-            ] = self.config.zero_conf_level
-            pred_df["probability"] /= self.config.zero_conf_level
-            pred_df.loc[pred_df["probability"].isnull(), "probability"] = 1
-            pred_df["probability"] = 1 - pred_df["probability"]
+                pred_df = pred_df.loc[val_df[self.config.id_col_name]].reset_index()
+                pred_df["probability"] = pred_df["E"]
+                pred_df.loc[
+                    pred_df["probability"] > self.config.zero_conf_level, "probability"
+                ] = self.config.zero_conf_level
+                pred_df["probability"] /= self.config.zero_conf_level
+                pred_df.loc[pred_df["probability"].isnull(), "probability"] = 1
+                pred_df["probability"] = 1 - pred_df["probability"]
 
-            if return_long_df:
-                batch_results.append(pred_df.loc[~pred_df[self.config.target_col_name].isnull(),
-                                                 [self.config.id_col_name,
-                                                  self.config.target_col_name,
-                                                  "probability"]])
-            else:
-                val_proba_np = np.zeros((len(val_df), len(self.config.class_names)))
-                for class_i, class_name in enumerate(self.config.class_names):
-                    bool_idx = (pred_df[self.config.target_col_name] == class_name).values
-                    val_proba_np[bool_idx, class_i] = pred_df.loc[bool_idx, "probability"]
-                batch_results.append(val_proba_np)
+                if return_long_df:
+                    batch_results.append(pred_df.loc[~pred_df[self.config.target_col_name].isnull(),
+                                                     [self.config.id_col_name,
+                                                      self.config.target_col_name,
+                                                      "probability"]])
+                else:
+                    val_proba_np = np.zeros((len(val_df), len(self.config.class_names)))
+                    for class_i, class_name in enumerate(self.config.class_names):
+                        bool_idx = (pred_df[self.config.target_col_name] == class_name).values
+                        val_proba_np[bool_idx, class_i] = pred_df.loc[bool_idx, "probability"]
+                    batch_results.append(val_proba_np)
         if return_long_df:
             return pd.concat(batch_results)
         return np.concatenate(batch_results)

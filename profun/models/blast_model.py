@@ -117,48 +117,49 @@ class BlastMatching(BaseModel):
                             desc='Predicting with BLASTp-matching..'):
             val_df_batch = val_df.iloc[
                            batch_i * self.config.pred_batch_size: (batch_i + 1) * self.config.pred_batch_size]
-            output_path = self._predict(val_df_batch, self.db_path)
-            blast_results_df = pd.read_csv(
-                output_path, names=[f"{self.config.id_col_name}_blasted", "Matched ID"] + list(range(10))
-            )
-            blasted_merged_with_train_df = blast_results_df.merge(
-                self.train_df[[self.config.id_col_name, self.config.target_col_name]],
-                left_on="Matched ID",
-                right_on=self.config.id_col_name,
-                copy=False,
-            )
-            label_and_nn_counts = (blasted_merged_with_train_df
-                                   .groupby(f"{self.config.id_col_name}_blasted")[
-                                       [self.config.target_col_name, "Matched ID"]]
-                                   .agg(
-                {self.config.target_col_name: lambda x: [Counter(x)], "Matched ID": lambda x: [len(set(x))]})
-                                   .reset_index()
-                                   )
-            label_and_nn_counts['prediction_dict'] = (
-                    label_and_nn_counts[self.config.target_col_name] + label_and_nn_counts['Matched ID']).map(
-                lambda x: {class_name: class_count / x[1] for class_name, class_count in x[0].items()})
-            label_and_nn_counts = label_and_nn_counts.merge(
-                val_df_batch, left_on=f"{self.config.id_col_name}_blasted",
-                right_on=self.config.id_col_name, how="right"
-            )
-            if return_long_df:
-                for _, row in label_and_nn_counts.iterrows():
-                    if isinstance(row['prediction_dict'], dict):
-                        for class_name, class_prob in row['prediction_dict'].items():
-                            predicted_ids.append(row[self.config.id_col_name])
-                            predicted_classes.append(class_name)
-                            predicted_probs.append(class_prob)
-            else:
-                val_proba_np_batch = np.zeros((len(val_df_batch), len(self.config.class_names)))
-                for class_i, class_name in enumerate(self.config.class_names):
-                    val_proba_np_batch[:, class_i] = label_and_nn_counts['prediction_dict'].map(
-                        lambda x: x[class_name] if isinstance(x, dict) and class_name in x else 0
-                    )
-                indices_batch = label_and_nn_counts[self.config.id_col_name].values
-                orig_val_2_ord = {value: i for i, value in enumerate(val_df_batch[self.config.id_col_name])}
-                order_of_predictions_in_orig_batch = sorted(range(len(indices_batch)),
-                                                            key=lambda idx: orig_val_2_ord[indices_batch[idx]])
-                all_predicted_batches.append(val_proba_np_batch[order_of_predictions_in_orig_batch])
+            if len(val_df_batch):
+                output_path = self._predict(val_df_batch, self.db_path)
+                blast_results_df = pd.read_csv(
+                    output_path, names=[f"{self.config.id_col_name}_blasted", "Matched ID"] + list(range(10))
+                )
+                blasted_merged_with_train_df = blast_results_df.merge(
+                    self.train_df[[self.config.id_col_name, self.config.target_col_name]],
+                    left_on="Matched ID",
+                    right_on=self.config.id_col_name,
+                    copy=False,
+                )
+                label_and_nn_counts = (blasted_merged_with_train_df
+                                       .groupby(f"{self.config.id_col_name}_blasted")[
+                                           [self.config.target_col_name, "Matched ID"]]
+                                       .agg(
+                    {self.config.target_col_name: lambda x: [Counter(x)], "Matched ID": lambda x: [len(set(x))]})
+                                       .reset_index()
+                                       )
+                label_and_nn_counts['prediction_dict'] = (
+                        label_and_nn_counts[self.config.target_col_name] + label_and_nn_counts['Matched ID']).map(
+                    lambda x: {class_name: class_count / x[1] for class_name, class_count in x[0].items()})
+                label_and_nn_counts = label_and_nn_counts.merge(
+                    val_df_batch, left_on=f"{self.config.id_col_name}_blasted",
+                    right_on=self.config.id_col_name, how="right"
+                )
+                if return_long_df:
+                    for _, row in label_and_nn_counts.iterrows():
+                        if isinstance(row['prediction_dict'], dict):
+                            for class_name, class_prob in row['prediction_dict'].items():
+                                predicted_ids.append(row[self.config.id_col_name])
+                                predicted_classes.append(class_name)
+                                predicted_probs.append(class_prob)
+                else:
+                    val_proba_np_batch = np.zeros((len(val_df_batch), len(self.config.class_names)))
+                    for class_i, class_name in enumerate(self.config.class_names):
+                        val_proba_np_batch[:, class_i] = label_and_nn_counts['prediction_dict'].map(
+                            lambda x: x[class_name] if isinstance(x, dict) and class_name in x else 0
+                        )
+                    indices_batch = label_and_nn_counts[self.config.id_col_name].values
+                    orig_val_2_ord = {value: i for i, value in enumerate(val_df_batch[self.config.id_col_name])}
+                    order_of_predictions_in_orig_batch = sorted(range(len(indices_batch)),
+                                                                key=lambda idx: orig_val_2_ord[indices_batch[idx]])
+                    all_predicted_batches.append(val_proba_np_batch[order_of_predictions_in_orig_batch])
         if return_long_df:
             return pd.DataFrame({self.config.id_col_name: predicted_ids,
                                  self.config.target_col_name: predicted_classes,
