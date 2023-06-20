@@ -137,7 +137,7 @@ class ProfileHMM(BaseModel):
         ) as file:
             file.writelines(test_fasta.replace("'", "").replace('"', ""))
 
-        logger.info(f'Predicting for class {class_name}, fasta size: {len(test_fasta.split(">"))}')
+        # logger.info(f'Predicting for class {class_name}, fasta size: {len(test_fasta.split(">"))}')
 
         result_id = str(uuid.uuid4())
         assert (
