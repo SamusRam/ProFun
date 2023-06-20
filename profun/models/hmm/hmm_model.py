@@ -274,7 +274,7 @@ class ProfileHMM(BaseModel):
             pred_df["probability"] = 1 - pred_df["probability"]
 
             if return_long_df:
-                batch_results.append(pred_df.loc[~pred_df[self.config.target_col_name],
+                batch_results.append(pred_df.loc[~pred_df[self.config.target_col_name].isnull(),
                                                  [self.config.id_col_name,
                                                   self.config.target_col_name,
                                                   "probability"]])
