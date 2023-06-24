@@ -7,7 +7,7 @@ import sys
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
-from shutil import rmtree, copyfile
+from shutil import rmtree, move
 from typing import Type, Optional, List
 
 import numpy as np
@@ -67,10 +67,17 @@ class FoldseekMatching(BaseModel):
         # moving only the required ids; a possible alternative for the future: --tar-exclude option of foldseek createdb
         selection_path = self.working_directory / f"_{uuid4()}"
         selection_path.mkdir()
-        for uniprot_id in tqdm(list_of_required_ids, desc="Copying the PDB files..."):
+        for uniprot_id in tqdm(list_of_required_ids, desc="Moving the PDB files..."):
             filename = f"{uniprot_id}.pdb"
-            copyfile(self.local_pdb_storage_path/filename, selection_path/filename)
+            move(self.local_pdb_storage_path/filename, selection_path/filename)
         return selection_path
+
+    def move_pdbs_to_main_storage(self, direction_to_move: str | Path):
+        direction_to_move = Path(direction_to_move)
+        available_pdb_files = [file for file in direction_to_move.glob('*.pdb')]
+        for filename in tqdm(available_pdb_files, desc="Moving the PDB files back..."):
+            move(direction_to_move/filename, self.local_pdb_storage_path/filename)
+        rmtree(direction_to_move)
 
     def _train(self, df: pd.DataFrame) -> str:
         list_of_required_trn_ids = list(set(df[self.config.id_col_name].values))
@@ -84,7 +91,7 @@ class FoldseekMatching(BaseModel):
         )
         logger.info(f"Trn DB, foldseek createdb output: {createdb_out}")
         # moving back the additional ids
-        rmtree(trn_structs_path)
+        self.move_pdbs_to_main_storage(trn_structs_path)
         return "trn_db"
 
     def _predict(self, df: pd.DataFrame, trn_db_name: str) -> str:
@@ -98,7 +105,7 @@ class FoldseekMatching(BaseModel):
             stderr=sys.stdout,
         )
         logger.info(f"Query DB, foldseek createdb output: {createdb_out}")
-        rmtree(query_structs_path)
+        self.move_pdbs_to_main_storage(query_structs_path)
         search_out = subprocess.check_output(f"foldseek search query_db {self.trn_db_path} {self.working_directory}/resultDB tmp -e {self.config.e_threshold} --max-seqs {self.config.n_neighbours}".split(),
                                              stderr=sys.stdout)
         logger.info(f"Foldseek search output: {search_out}")
