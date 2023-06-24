@@ -65,7 +65,7 @@ class FoldseekMatching(BaseModel):
         os.remove(path_to_id_file)
         # moving only the required ids; a possible alternative for the future: --tar-exclude option of foldseek createdb
         selection_path = self.working_directory / f"_{uuid4()}"
-        for uniprot_id in list_of_required_ids:
+        for uniprot_id in tqdm(list_of_required_ids, desc="Copying the PDB files..."):
             filename = f"{uniprot_id}.pdb"
             copyfile(self.local_pdb_storage_path/filename, selection_path/filename)
         return selection_path
