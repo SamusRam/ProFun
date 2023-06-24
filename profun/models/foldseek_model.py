@@ -55,14 +55,15 @@ class FoldseekMatching(BaseModel):
     def organize_db_folder(self, list_of_required_ids: List[str]):
         available_ids = {file.stem for file in self.local_pdb_storage_path.glob('*.pdb')}
         ids_to_download = [uniprot_id for uniprot_id in list_of_required_ids if uniprot_id not in available_ids]
-        path_to_id_file = self.working_directory / "_temp_ids_list"
-        with open(path_to_id_file, "w") as file:
-            file.writelines('\n'.join(ids_to_download))
-        subprocess.check_output(
-            f"python -m profun.utils.alphafold_struct_downloader --structures-output-path {self.local_pdb_storage_path} --path-to-file-with-ids {path_to_id_file}".split(),
-            stderr=sys.stdout,
-        )
-        os.remove(path_to_id_file)
+        if len(ids_to_download):
+            path_to_id_file = self.working_directory / "_temp_ids_list"
+            with open(path_to_id_file, "w") as file:
+                file.writelines('\n'.join(ids_to_download))
+            subprocess.check_output(
+                f"python -m profun.utils.alphafold_struct_downloader --structures-output-path {self.local_pdb_storage_path} --path-to-file-with-ids {path_to_id_file}".split(),
+                stderr=sys.stdout,
+            )
+            os.remove(path_to_id_file)
         # moving only the required ids; a possible alternative for the future: --tar-exclude option of foldseek createdb
         selection_path = self.working_directory / f"_{uuid4()}"
         for uniprot_id in tqdm(list_of_required_ids, desc="Copying the PDB files..."):
@@ -72,7 +73,7 @@ class FoldseekMatching(BaseModel):
 
     def _train(self, df: pd.DataFrame) -> str:
         list_of_required_trn_ids = list(set(df[self.config.id_col_name].values))
-        trn_structs_path = self.organize_db_folder(list_of_required_trn_ids, self.trn_db_path)
+        trn_structs_path = self.organize_db_folder(list_of_required_trn_ids)
         logger.info(
             f"Prepared Foldseek trn folder"
         )
