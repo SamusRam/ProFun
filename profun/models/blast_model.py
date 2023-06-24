@@ -66,8 +66,8 @@ class BlastMatching(BaseModel):
         fasta_str = "\n".join(full_entries)
         return fasta_str.replace("'", "").replace('"', "")
 
-    def _train(self, tps_df: pd.DataFrame) -> str:
-        fasta_str = self.get_fasta_seqs(tps_df)
+    def _train(self, df: pd.DataFrame) -> str:
+        fasta_str = self.get_fasta_seqs(df)
         with open(f"{self.working_directory}/_temp.fasta", "w") as f:
             f.writelines(fasta_str)
         all_id_lines = [line for line in fasta_str.split() if ">" in line]
@@ -83,8 +83,8 @@ class BlastMatching(BaseModel):
 
         return f"{self.working_directory}/_temp.fasta"
 
-    def _predict(self, tps_df: pd.DataFrame, db_name: str) -> str:
-        test_fasta = self.get_fasta_seqs(tps_df)
+    def _predict(self, df: pd.DataFrame, db_name: str) -> str:
+        test_fasta = self.get_fasta_seqs(df)
         with open(f"{self.working_directory}/_test.fasta", "w") as f:
             f.writelines(test_fasta.replace("'", "").replace('"', ""))
         if os.path.exists(f"{self.working_directory}/results_raw.csv"):
