@@ -77,7 +77,7 @@ class FoldseekMatching(BaseModel):
         available_pdb_files = [file for file in direction_to_move.glob('*.pdb')]
         for filename in tqdm(available_pdb_files, desc="Moving the PDB files back..."):
             move(direction_to_move/filename, self.local_pdb_storage_path/filename)
-        rmtree(direction_to_move)
+        # rmtree(direction_to_move)
 
     def _train(self, df: pd.DataFrame) -> str:
         list_of_required_trn_ids = list(set(df[self.config.id_col_name].values))
