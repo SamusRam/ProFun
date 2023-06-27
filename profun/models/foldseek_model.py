@@ -59,11 +59,16 @@ class FoldseekMatching(BaseModel):
             path_to_id_file = self.working_directory / "_temp_ids_list"
             with open(path_to_id_file, "w") as file:
                 file.writelines('\n'.join(ids_to_download))
-            subprocess.check_output(
-                f"python -m profun.utils.alphafold_struct_downloader --structures-output-path {self.local_pdb_storage_path} --path-to-file-with-ids {path_to_id_file}".split(),
-                stderr=sys.stdout,
-            )
-            os.remove(path_to_id_file)
+            try:
+                downloading_output = subprocess.check_output(
+                    f"python -m profun.utils.alphafold_struct_downloader --structures-output-path {self.local_pdb_storage_path} --path-to-file-with-ids {path_to_id_file}".split(),
+                )
+                logger.info(f"AlphaFold2 structure download finished with output: {downloading_output}")
+            except subprocess.CalledProcessError:
+                logger.error("AlphaFold2 structures downloading failed")
+                raise subprocess.CalledProcessError
+            finally:
+                os.remove(path_to_id_file)
         # moving only the required ids; a possible alternative for the future: --tar-exclude option of foldseek createdb
         selection_path = self.working_directory / f"_{uuid4()}"
         selection_path.mkdir()
@@ -74,10 +79,10 @@ class FoldseekMatching(BaseModel):
 
     def move_pdbs_to_main_storage(self, direction_to_move: str | Path):
         direction_to_move = Path(direction_to_move)
-        available_pdb_files = [file for file in direction_to_move.glob('*.pdb')]
+        available_pdb_files = [file.name for file in direction_to_move.glob('*.pdb')]
         for filename in tqdm(available_pdb_files, desc="Moving the PDB files back..."):
             move(direction_to_move/filename, self.local_pdb_storage_path/filename)
-        # rmtree(direction_to_move)
+        rmtree(direction_to_move)
 
     def _train(self, df: pd.DataFrame) -> str:
         list_of_required_trn_ids = list(set(df[self.config.id_col_name].values))
