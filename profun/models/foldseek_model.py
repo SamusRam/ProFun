@@ -162,7 +162,7 @@ class FoldseekMatching(BaseModel):
                                        .reset_index()
                                        )
                 label_and_nn_counts['prediction_dict'] = (
-                        label_and_nn_counts[self.config.target_col_name] + label_and_nn_counts['Matched ID']).map(
+                        label_and_nn_counts[self.config.target_col_name] + label_and_nn_counts[f"{self.config.id_col_name}_matched"]).map(
                     lambda x: {class_name: class_count / x[1] for class_name, class_count in x[0].items()})
                 label_and_nn_counts = label_and_nn_counts.merge(
                     val_df_batch, left_on=f"{self.config.id_col_name}_blasted",
