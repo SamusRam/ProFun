@@ -61,7 +61,7 @@ class FoldseekMatching(BaseModel):
                 file.writelines('\n'.join(ids_to_download))
             try:
                 downloading_output = subprocess.check_output(
-                    f"python -m profun.utils.alphafold_struct_downloader --structures-output-path {self.local_pdb_storage_path} --path-to-file-with-ids {path_to_id_file}".split(),
+                    f"python -m profun.utils.alphafold_struct_downloader --structures-output-path {self.local_pdb_storage_path} --path-to-file-with-ids {path_to_id_file} --n-jobs {self.config.n_jobs}".split(),
                 )
                 logger.info(f"AlphaFold2 structure download finished with output: {downloading_output}")
             except subprocess.CalledProcessError:

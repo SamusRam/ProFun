@@ -5,6 +5,7 @@ import logging
 from pathlib import Path
 
 import requests
+from concurrent.futures import ThreadPoolExecutor
 
 import pandas as pd  # type: ignore
 
@@ -29,6 +30,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--path-to-file-with-ids", type=str, 
                         default="../data/uniprot_ids_of_interest.txt", help="Path to a file containing UniProt IDs,"
                                                                             "for which the script will download AF2 structures")
+    parser.add_argument("--n-jobs", type=int, default=1)
+
     args = parser.parse_args()
     return args
 
@@ -42,7 +45,8 @@ if __name__ == "__main__":
     with open(cl_args.path_to_file_with_ids, 'r') as file:
         all_ids_of_interest = [line.strip() for line in file.readlines()]
 
-    for uniprot_id in tqdm(all_ids_of_interest):
+
+    def download_af_struct(uniprot_id):
         try:
             URL = f"https://alphafold.ebi.ac.uk/files/AF-{uniprot_id}-F1-model_v3.pdb"
             response = requests.get(URL)
@@ -50,4 +54,6 @@ if __name__ == "__main__":
                 file.write(response.content)
         except:
             logger.warning(f"Error downloading AlphaFold2 structure for {uniprot_id}")
-            continue
+
+    with ThreadPoolExecutor(max_workers=cl_args.n_jobs) as executor:
+        executor.map(download_af_struct, all_ids_of_interest)
