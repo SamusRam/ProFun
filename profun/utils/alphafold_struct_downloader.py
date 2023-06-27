@@ -35,11 +35,9 @@ def parse_args() -> argparse.Namespace:
 
 if __name__ == "__main__":
     cl_args = parse_args()
-    root_path = cl_args.input_root_path
-
-    root_af_cafa = Path(cl_args.structures_output_path)
-    if not root_af_cafa.exists():
-        root_af_cafa.mkdir()
+    root_af = Path(cl_args.structures_output_path)
+    if not root_af.exists():
+        root_af.mkdir()
 
     with open(cl_args.path_to_file_with_ids, 'r') as file:
         all_ids_of_interest = [line.strip() for line in file.readlines()]
@@ -48,7 +46,7 @@ if __name__ == "__main__":
         try:
             URL = f"https://alphafold.ebi.ac.uk/files/AF-{uniprot_id}-F1-model_v3.pdb"
             response = requests.get(URL)
-            with open(root_af_cafa / f"{uniprot_id}.pdb", "wb") as file:
+            with open(root_af / f"{uniprot_id}.pdb", "wb") as file:
                 file.write(response.content)
         except:
             logger.warning(f"Error downloading AlphaFold2 structure for {uniprot_id}")
