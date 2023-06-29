@@ -17,6 +17,11 @@ conda install -c bioconda mafft -y
 conda install -c bioconda hmmer -y
 ```
 
+If you want to use Foldseek-based model, please run the following command:
+```
+conda install -c conda-forge -c bioconda foldseek -y
+```
+
 # Basic usage
 ## BLAST
 Please see [this notebook](https://www.kaggle.com/code/samusram/blastp-sprof-go) as a usage demo.
@@ -81,3 +86,36 @@ hmm_model = ProfileHMM(config)
 hmm_model.fit(train_df_long)
 test_pred_df = hmm_model.predict_proba(test_seqs_df.drop_duplicates('EntryID'), return_long_df=True)
 ```
+
+## Foldseek-based classifier
+Please see [this notebook](https://www.kaggle.com/code/samusram/leveraging-foldseek) as a usage demo.
+
+```
+from profun.models import FoldseekMatching, FoldseekConfig
+from profun.utils.project_info import ExperimentInfo
+
+experiment_info = ExperimentInfo(validation_schema='public_lb', 
+                                 model_type='foldseek', model_version='5nn')
+
+config = FoldseekConfig(experiment_info=experiment_info, 
+                        id_col_name='EntryID', 
+                        target_col_name='term',
+                        seq_col_name='Seq',
+                        class_names=list(train_df_long_sample['term'].unique()), 
+                        optimize_hyperparams=False, 
+                        n_calls_hyperparams_opt=None,
+                        hyperparam_dimensions=None,
+                        per_class_optimization=None,
+                        class_weights=None,
+                        n_neighbours=5,
+                        e_threshold=0.0001,
+                        n_jobs=56,
+                        pred_batch_size=10,
+                        local_pdb_storage_path=None #then it stores structures into the working dir
+                    )
+
+model = FoldseekMatching(config)
+model.fit(train_df_long)
+test_pred_df = model.predict_proba(test_seqs_df.drop_duplicates('EntryID'), return_long_df=True)
+```
+
