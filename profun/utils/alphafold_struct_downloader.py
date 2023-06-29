@@ -5,7 +5,7 @@ import logging
 from pathlib import Path
 
 import requests
-from concurrent.futures import ThreadPoolExecutor
+from multiprocessing import Pool
 
 import pandas as pd  # type: ignore
 
@@ -55,5 +55,5 @@ if __name__ == "__main__":
         except:
             logger.warning(f"Error downloading AlphaFold2 structure for {uniprot_id}")
 
-    with ThreadPoolExecutor(max_workers=cl_args.n_jobs) as executor:
-        executor.map(download_af_struct, all_ids_of_interest)
+    with Pool(processes=cl_args.n_jobs) as pool:
+        pool.map(download_af_struct, all_ids_of_interest)
