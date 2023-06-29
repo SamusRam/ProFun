@@ -91,13 +91,13 @@ class FoldseekMatching(BaseModel):
             f"Prepared Foldseek trn folder"
         )
         createdb_out = subprocess.check_output(
-            f"foldseek createdb {trn_structs_path} trn_db --threads {self.config.n_jobs}".split(),
+            f"foldseek createdb {trn_structs_path} {self.working_directory/'trn_db'} --threads {self.config.n_jobs}".split(),
             stderr=sys.stdout,
         )
         logger.info(f"Trn DB, foldseek createdb output: {createdb_out}")
         # moving back the additional ids
         self.move_pdbs_to_main_storage(trn_structs_path)
-        return "trn_db"
+        return self.working_directory/"trn_db"
 
     def _predict(self, df: pd.DataFrame, trn_db_name: str) -> str:
         list_of_required_trn_ids = list(set(df[self.config.id_col_name].values))
@@ -106,15 +106,15 @@ class FoldseekMatching(BaseModel):
             f"Prepared Foldseek query folder"
         )
         createdb_out = subprocess.check_output(
-            f'foldseek createdb {query_structs_path} query_db --threads {self.config.n_jobs}'.split(),
+            f"foldseek createdb {query_structs_path} {self.working_directory/'query_db'} --threads {self.config.n_jobs}".split(),
             stderr=sys.stdout,
         )
         logger.info(f"Query DB, foldseek createdb output: {createdb_out}")
         self.move_pdbs_to_main_storage(query_structs_path)
-        search_out = subprocess.check_output(f"foldseek search query_db {self.trn_db_path} {self.working_directory}/resultDB tmp -e {self.config.e_threshold} --max-seqs {self.config.n_neighbours}".split(),
+        search_out = subprocess.check_output(f"foldseek search {self.working_directory/'query_db'} {self.trn_db_path} {self.working_directory}/resultDB tmp -e {self.config.e_threshold} --max-seqs {self.config.n_neighbours}".split(),
                                              stderr=sys.stdout)
         logger.info(f"Foldseek search output: {search_out}")
-        result_conversion_out = subprocess.check_output(f'foldseek convertalis query_db {self.trn_db_path} {self.working_directory}/resultDB {self.working_directory}/result.tsv --format-output query,target,evalue'.split(),
+        result_conversion_out = subprocess.check_output(f"foldseek convertalis {self.working_directory/'query_db'} {self.trn_db_path} {self.working_directory}/resultDB {self.working_directory}/result.tsv --format-output query,target,evalue".split(),
                                              stderr=sys.stdout)
         logger.info(f"Result conversion output: {result_conversion_out}")
         return f"{self.working_directory}/result.tsv"
