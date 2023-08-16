@@ -46,7 +46,7 @@ if __name__ == "__main__":
         all_ids_of_interest = [line.strip() for line in file.readlines()]
 
 
-    def download_af_struct(uniprot_id):
+    def download_af_struct(uniprot_id, fails_count=0, max_fails_count=3):
         try:
             URL = f"https://alphafold.ebi.ac.uk/files/AF-{uniprot_id}-F1-model_v3.pdb"
             response = requests.get(URL)
@@ -54,6 +54,8 @@ if __name__ == "__main__":
                 file.write(response.content)
         except:
             logger.warning(f"Error downloading AlphaFold2 structure for {uniprot_id}")
+            if fails_count < max_fails_count:
+                download_af_struct(uniprot_id, fails_count+1)
 
     with Pool(processes=cl_args.n_jobs) as pool:
         pool.map(download_af_struct, all_ids_of_interest)
