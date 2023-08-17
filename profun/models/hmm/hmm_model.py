@@ -261,6 +261,8 @@ class ProfileHMM(BaseModel):
                     if (class_name, kingdom) in self.class_name_2_path_to_model_paths
                 }
                 pred_df = self.aggregate_predictions(class_name_2_pred_path)
+                print('pred_df.shape', pred_df.shape)
+                print('pred_df[self.config.id_col_name].nunique()', pred_df[self.config.id_col_name].nunique())
                 pred_df = pred_df.merge(val_df[[self.config.id_col_name, self.config.seq_col_name]], on=self.config.id_col_name, how="right").set_index(
                     self.config.id_col_name
                 )
