@@ -261,11 +261,9 @@ class ProfileHMM(BaseModel):
                     if (class_name, kingdom) in self.class_name_2_path_to_model_paths
                 }
                 pred_df = self.aggregate_predictions(class_name_2_pred_path)
-                print('pred_df.columns', pred_df.columns)
-                pred_df = pred_df.merge(val_df, on=self.config.id_col_name, how="right").set_index(
+                pred_df = pred_df.merge(val_df[[self.config.id_col_name, self.config.seq_col_name]], on=self.config.id_col_name, how="right").set_index(
                     self.config.id_col_name
                 )
-                print('pred_df.columns', pred_df.columns)
                 pred_df = pred_df.loc[val_df[self.config.id_col_name]].reset_index()
                 pred_df["probability"] = pred_df["E"]
                 pred_df.loc[
