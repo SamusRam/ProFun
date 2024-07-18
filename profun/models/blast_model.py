@@ -103,7 +103,12 @@ class BlastMatching(BaseModel):
                 np.any(self.train_df[[self.config.id_col_name, self.config.target_col_name]] != train_df[
                     [self.config.id_col_name, self.config.target_col_name]])):
             self.train_df = train_df.copy()
-            self.db_path = self._train(train_df.drop_duplicates(subset=[self.config.id_col_name]))
+            try:
+                train_df.drop_duplicates(subset=[self.config.id_col_name], inplace=True)
+            except TypeError:
+                train_df[self.config.id_col_name] = train_df[self.config.id_col_name].map(lambda x: tuple(sorted(x)))
+                train_df.drop_duplicates(subset=[self.config.id_col_name], inplace=True)
+            self.db_path = self._train()
 
     def predict_proba(self, val_df: pd.DataFrame, return_long_df: bool = False) -> [np.ndarray | pd.DataFrame]:
         assert val_df[self.config.id_col_name].nunique() == len(
