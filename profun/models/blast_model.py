@@ -109,7 +109,7 @@ class BlastMatching(BaseModel):
             self.train_df = train_df.copy()
             train_df.drop_duplicates(subset=[self.config.id_col_name], inplace=True)
             train_df.drop_duplicates(subset=[self.config.id_col_name], inplace=True)
-            self.db_path = self._train()
+            self.db_path = self._train(train_df)
 
     def predict_proba(self, val_df: pd.DataFrame, return_long_df: bool = False) -> [np.ndarray | pd.DataFrame]:
         assert val_df[self.config.id_col_name].nunique() == len(
