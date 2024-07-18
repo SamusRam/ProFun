@@ -7,7 +7,7 @@ The majority of dependencies will be installed automatically via the command
 
 If you want to use the BLAST-based model, please run these commands:
 ```
-wget https://ftp.ncbi.nlm.nih.gov/blast/executables/LATEST/ncbi-blast-2.14.0+-x64-linux.tar.gz
+wget https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/2.14.0/ncbi-blast-2.14.0+-x64-linux.tar.gz
 tar zxvpf ncbi-blast-2.14.0+-x64-linux.tar.gz
 # add ncbi-blast-2.14.0+/bin to PATH
 ```
