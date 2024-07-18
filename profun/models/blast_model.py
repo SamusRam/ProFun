@@ -96,18 +96,19 @@ class BlastMatching(BaseModel):
         return f"{self.working_directory}/results_raw.csv"
 
     def fit_core(self, train_df: pd.DataFrame, class_name: str = None):
-        train_df.drop_duplicates(
-            subset=[self.config.id_col_name, self.config.target_col_name], inplace=True
-        )
+        try:
+            train_df.drop_duplicates(
+                subset=[self.config.id_col_name, self.config.target_col_name], inplace=True
+            )
+        except TypeError:
+            train_df[self.config.id_col_name] = train_df[self.config.id_col_name].map(lambda x: tuple(sorted(x)))
+
         if (self.db_path is None or
                 np.any(self.train_df[[self.config.id_col_name, self.config.target_col_name]] != train_df[
                     [self.config.id_col_name, self.config.target_col_name]])):
             self.train_df = train_df.copy()
-            try:
-                train_df.drop_duplicates(subset=[self.config.id_col_name], inplace=True)
-            except TypeError:
-                train_df[self.config.id_col_name] = train_df[self.config.id_col_name].map(lambda x: tuple(sorted(x)))
-                train_df.drop_duplicates(subset=[self.config.id_col_name], inplace=True)
+            train_df.drop_duplicates(subset=[self.config.id_col_name], inplace=True)
+            train_df.drop_duplicates(subset=[self.config.id_col_name], inplace=True)
             self.db_path = self._train()
 
     def predict_proba(self, val_df: pd.DataFrame, return_long_df: bool = False) -> [np.ndarray | pd.DataFrame]:
