@@ -101,7 +101,7 @@ class BlastMatching(BaseModel):
                 subset=[self.config.id_col_name, self.config.target_col_name], inplace=True
             )
         except TypeError:
-            train_df[self.config.id_col_name] = train_df[self.config.id_col_name].map(lambda x: tuple(sorted(x)))
+            train_df[self.config.id_col_name] = train_df[self.config.id_col_name].map(lambda x: str(sorted(x)))
 
         if (self.db_path is None or
                 np.any(self.train_df[[self.config.id_col_name, self.config.target_col_name]] != train_df[
