@@ -3,7 +3,9 @@ Library of models for **Pro**tein **Fun**ction prediction
 
 # Installation
 The majority of dependencies will be installed automatically via the command
-`pip install git+https://github.com/SamusRam/ProFun.git`.
+```
+pip install git+https://github.com/SamusRam/ProFun.git
+```
 
 If you want to use the BLAST-based model, please run these commands:
 ```
