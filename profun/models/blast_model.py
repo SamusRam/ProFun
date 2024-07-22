@@ -7,7 +7,7 @@ import sys
 from collections import Counter
 from dataclasses import dataclass
 from shutil import rmtree
-from typing import Type, Optional
+from typing import Type, Optional, Iterable
 
 import numpy as np
 import pandas as pd
@@ -101,13 +101,20 @@ class BlastMatching(BaseModel):
                 subset=[self.config.id_col_name, self.config.target_col_name], inplace=True
             )
         except TypeError:
-            train_df[self.config.id_col_name] = train_df[self.config.id_col_name].map(lambda x: str(sorted(x)))
+            try:
+                train_df.drop_duplicates(
+                    subset=[self.config.id_col_name], inplace=True
+                )
+            except TypeError:
+                train_df[self.config.id_col_name] = train_df[self.config.id_col_name].map(lambda x: str(sorted(x)))
+                train_df.drop_duplicates(
+                    subset=[self.config.id_col_name], inplace=True
+                )
 
         if (self.db_path is None or
                 np.any(self.train_df[[self.config.id_col_name, self.config.target_col_name]] != train_df[
                     [self.config.id_col_name, self.config.target_col_name]])):
             self.train_df = train_df.copy()
-            train_df.drop_duplicates(subset=[self.config.id_col_name], inplace=True)
             train_df.drop_duplicates(subset=[self.config.id_col_name], inplace=True)
             self.db_path = self._train(train_df)
 
@@ -128,8 +135,12 @@ class BlastMatching(BaseModel):
                 blast_results_df = pd.read_csv(
                     output_path, names=[f"{self.config.id_col_name}_blasted", "Matched ID"] + list(range(10))
                 )
+                train_df_with_targets = self.train_df[[self.config.id_col_name, self.config.target_col_name]]
+                if np.any(self.train_df[self.config.target_col_name].map(lambda x: isinstance(x, Iterable))):
+                    train_df_with_targets = train_df_with_targets.explode(self.config.target_col_name)
+
                 blasted_merged_with_train_df = blast_results_df.merge(
-                    self.train_df[[self.config.id_col_name, self.config.target_col_name]],
+                    train_df_with_targets,
                     left_on="Matched ID",
                     right_on=self.config.id_col_name,
                     copy=False,
