@@ -111,9 +111,9 @@ class BlastMatching(BaseModel):
                     subset=[self.config.id_col_name], inplace=True
                 )
 
-        if (self.db_path is None or
-                np.any(self.train_df[[self.config.id_col_name, self.config.target_col_name]] != train_df[
-                    [self.config.id_col_name, self.config.target_col_name]])):
+        if (self.db_path is None or len(self.train_df) != len(train_df) or
+                np.any(self.train_df[[self.config.id_col_name, self.config.target_col_name]].values != train_df[
+                    [self.config.id_col_name, self.config.target_col_name]].values)):
             self.train_df = train_df.copy()
             train_df.drop_duplicates(subset=[self.config.id_col_name], inplace=True)
             self.db_path = self._train(train_df)
