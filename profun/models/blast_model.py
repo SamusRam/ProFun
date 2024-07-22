@@ -114,8 +114,8 @@ class BlastMatching(BaseModel):
         if (self.db_path is None or len(self.train_df) != len(train_df) or
                 np.any(self.train_df[[self.config.id_col_name, self.config.target_col_name]].values != train_df[
                     [self.config.id_col_name, self.config.target_col_name]].values)):
-            self.train_df = train_df.copy()
             train_df.drop_duplicates(subset=[self.config.id_col_name], inplace=True)
+            self.train_df = train_df.copy()
             self.db_path = self._train(train_df)
 
     def predict_proba(self, val_df: pd.DataFrame, return_long_df: bool = False) -> [np.ndarray | pd.DataFrame]:

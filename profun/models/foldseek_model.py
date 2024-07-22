@@ -8,7 +8,7 @@ from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 from shutil import rmtree, move
-from typing import Type, Optional, List
+from typing import Type, Optional, List, Iterable
 
 import numpy as np
 import pandas as pd
@@ -120,12 +120,24 @@ class FoldseekMatching(BaseModel):
         return f"{self.working_directory}/result.tsv"
 
     def fit_core(self, train_df: pd.DataFrame, class_name: str = None):
-        train_df.drop_duplicates(
-            subset=[self.config.id_col_name, self.config.target_col_name], inplace=True
-        )
-        if (self.trn_db_path is None or
-                np.any(self.train_df[[self.config.id_col_name, self.config.target_col_name]] != train_df[
-                    [self.config.id_col_name, self.config.target_col_name]])):
+        try:
+            train_df.drop_duplicates(
+                subset=[self.config.id_col_name, self.config.target_col_name], inplace=True
+            )
+        except TypeError:
+            try:
+                train_df.drop_duplicates(
+                    subset=[self.config.id_col_name], inplace=True
+                )
+            except TypeError:
+                train_df[self.config.id_col_name] = train_df[self.config.id_col_name].map(lambda x: str(sorted(x)))
+                train_df.drop_duplicates(
+                    subset=[self.config.id_col_name], inplace=True
+                )
+        if (self.trn_db_path is None or len(self.train_df) != len(train_df) or
+                np.any(self.train_df[[self.config.id_col_name, self.config.target_col_name]].values != train_df[
+                    [self.config.id_col_name, self.config.target_col_name]].values)):
+            train_df.drop_duplicates(subset=[self.config.id_col_name], inplace=True)
             self.train_df = train_df.copy()
             self.trn_db_path = self._train(train_df.drop_duplicates(subset=[self.config.id_col_name]))
 
@@ -148,8 +160,11 @@ class FoldseekMatching(BaseModel):
                 )
                 for colname in [f"{self.config.id_col_name}_queried", f"{self.config.id_col_name}_matched"]:
                     results_df[colname] = results_df[colname].map(lambda x: x.replace(".pdb", ""))
+                train_df_with_targets = self.train_df[[self.config.id_col_name, self.config.target_col_name]]
+                if np.any(self.train_df[self.config.target_col_name].map(lambda x: isinstance(x, Iterable))):
+                    train_df_with_targets = train_df_with_targets.explode(self.config.target_col_name)
                 results_merged_with_train_df = results_df.merge(
-                    self.train_df[[self.config.id_col_name, self.config.target_col_name]],
+                    train_df_with_targets,
                     left_on=f"{self.config.id_col_name}_matched",
                     right_on=self.config.id_col_name,
                     copy=False,
