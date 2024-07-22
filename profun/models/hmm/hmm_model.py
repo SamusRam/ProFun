@@ -7,7 +7,7 @@ import pickle
 import uuid
 from itertools import groupby
 from shutil import rmtree
-from typing import Dict, List, Type
+from typing import Dict, List, Type, Iterable
 
 import numpy as np
 import pandas as pd  # type: ignore
@@ -77,7 +77,7 @@ class ProfileHMM(BaseModel):
         """
         if type_name is not None and group_name is not None:
             df_subset = df.loc[
-                (df[self.config.target_col_name] == type_name)
+                (df[self.config.target_col_name].map(lambda x: (isinstance(x, str) and x == type_name) or (isinstance(x, set) and type_name in x)))
                 & (df[self.config.group_column_name] == group_name)
                 ]
             seqs = df_subset[self.config.seq_col_name].values
@@ -190,26 +190,37 @@ class ProfileHMM(BaseModel):
         return predictions_df
 
     def fit_core(self, train_df: pd.DataFrame, class_name: str = None):
-        assert isinstance(
-            self.config, HmmConfig
-        ), "HHM config instance is expected to be of type HmmConfig"
+        # assert isinstance(
+        #     self.config, HmmConfig
+        # ), "HHM config instance is expected to be of type HmmConfig"
         if self.config.group_column_name is None:
             train_df[self.config.group_column_name] = "all"
-        train_df.drop_duplicates(
-            subset=[self.config.id_col_name, self.config.target_col_name], inplace=True
-        )
+        try:
+            train_df.drop_duplicates(
+                subset=[self.config.id_col_name, self.config.target_col_name], inplace=True
+            )
+        except TypeError:
+            try:
+                train_df.drop_duplicates(
+                    subset=[self.config.id_col_name], inplace=True
+                )
+            except TypeError:
+                train_df[self.config.id_col_name] = train_df[self.config.id_col_name].map(lambda x: str(sorted(x)))
+                train_df.drop_duplicates(
+                    subset=[self.config.id_col_name], inplace=True
+                )
 
         logger.info("Train size: %d", len(train_df))
         if self.config.class_names is None:
             self.config.class_names = [
                 x
-                for x in train_df[self.config.target_col_name].unique()
+                for x in train_df[self.config.target_col_name].unique() # TODO: handle sets
                 if not pd.isnull(x)
             ]
 
         self.class_2_groups = {
             class_name: train_df.loc[
-                train_df[self.config.target_col_name] == class_name,
+                train_df[self.config.target_col_name].map(lambda x: (isinstance(x, str) and x == class_name) or (isinstance(x, set) and class_name in x)),
                 self.config.group_column_name,
             ].unique()
             for class_name in self.config.class_names
@@ -217,10 +228,13 @@ class ProfileHMM(BaseModel):
         self.class_name_2_path_to_model_paths = dict()
         for class_name in self.config.class_names:
             for kingdom in self.class_2_groups[class_name]:
-                if sum(
-                        (train_df[self.config.target_col_name] == class_name)
+                n_samples = sum(
+                        (train_df[self.config.target_col_name].map(lambda x: (isinstance(x, str) and x == class_name) or (isinstance(x, set) and class_name in x)))
                         & (train_df[self.config.group_column_name] == kingdom)
-                ) >= 2:
+                )
+                logger.info("For a class %s and group %s there are %d training samples",
+                            class_name, kingdom, n_samples)
+                if n_samples >= 2:
                     try:
                         self.class_name_2_path_to_model_paths[(class_name, kingdom)] = self._train_for_class_group(
                             train_df, class_name=class_name, group_name=kingdom)
@@ -247,6 +261,7 @@ class ProfileHMM(BaseModel):
                 self.config.class_names is not None
         ), "Class names were not derived and stored during training"
         batch_results = []
+
         for batch_i in tqdm(range(len(val_df) // self.config.pred_batch_size + 1),
                             desc='Predicting with Profile HMM..'):
             val_df_batch = val_df.iloc[
@@ -261,12 +276,9 @@ class ProfileHMM(BaseModel):
                     if (class_name, kingdom) in self.class_name_2_path_to_model_paths
                 }
                 pred_df = self.aggregate_predictions(class_name_2_pred_path)
-                print('pred_df.shape', pred_df.shape)
-                print('pred_df[self.config.id_col_name].nunique()', pred_df[self.config.id_col_name].nunique())
-                pred_df = pred_df.merge(val_df[[self.config.id_col_name, self.config.seq_col_name]], on=self.config.id_col_name, how="right").set_index(
+                pred_df = pred_df.merge(val_df_batch[[self.config.id_col_name, self.config.seq_col_name]], on=self.config.id_col_name, how="right").set_index(
                     self.config.id_col_name
                 )
-                pred_df = pred_df.loc[val_df[self.config.id_col_name]].reset_index()
                 pred_df["probability"] = pred_df["E"]
                 pred_df.loc[
                     pred_df["probability"] > self.config.zero_conf_level, "probability"
@@ -281,10 +293,13 @@ class ProfileHMM(BaseModel):
                                                       self.config.target_col_name,
                                                       "probability"]])
                 else:
-                    val_proba_np = np.zeros((len(val_df), len(self.config.class_names)))
+                    val_proba_np = np.zeros((len(val_df_batch), len(self.config.class_names)))
+                    pred_df = pred_df.groupby(self.config.id_col_name)[[self.config.target_col_name, "probability"]].agg(list)
+                    pred_df = pred_df.loc[val_df_batch[self.config.id_col_name]]
                     for class_i, class_name in enumerate(self.config.class_names):
-                        bool_idx = (pred_df[self.config.target_col_name] == class_name).values
-                        val_proba_np[bool_idx, class_i] = pred_df.loc[bool_idx, "probability"]
+                        bool_idx = (pred_df[self.config.target_col_name].map(lambda x: class_name in x)).values
+                        if sum(bool_idx):
+                            val_proba_np[bool_idx, class_i] = pred_df[bool_idx].apply(lambda row: row["probability"][row[self.config.target_col_name].index(class_name)], axis=1)
                     batch_results.append(val_proba_np)
         if return_long_df:
             return pd.concat(batch_results)
