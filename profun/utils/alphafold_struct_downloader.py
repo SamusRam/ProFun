@@ -56,7 +56,7 @@ def main():
     if not root_af.exists():
         root_af.mkdir()
 
-    download_af_struct_for_current_root = lambda uniprot_id: download_af_struct(uniprot_id, root_af)
+    download_af_struct_for_current_root = partial(download_af_struct, root_af=root_af)
 
     with open(cl_args.path_to_file_with_ids, 'r') as file:
         all_ids_of_interest = [line.strip() for line in file.readlines()]
