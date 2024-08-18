@@ -36,15 +36,15 @@ def parse_args() -> argparse.Namespace:
     return args
 
 def download_af_struct(uniprot_id, fails_count=0, max_fails_count=3):
-    try:
-        URL = f"https://alphafold.ebi.ac.uk/files/AF-{uniprot_id}-F1-model_v3.pdb"
-        response = requests.get(URL)
-        with open(root_af / f"{uniprot_id}.pdb", "wb") as file:
-            file.write(response.content)
-    except:
-        logger.warning(f"Error downloading AlphaFold2 structure for {uniprot_id}")
-        if fails_count < max_fails_count:
-            download_af_struct(uniprot_id, fails_count+1)
+    # try:
+    URL = f"https://alphafold.ebi.ac.uk/files/AF-{uniprot_id}-F1-model_v3.pdb"
+    response = requests.get(URL)
+    with open(root_af / f"{uniprot_id}.pdb", "wb") as file:
+        file.write(response.content)
+    # except:
+    #     logger.warning(f"Error downloading AlphaFold2 structure for {uniprot_id}")
+    #     if fails_count < max_fails_count:
+    #         download_af_struct(uniprot_id, fails_count+1)
 
 
 def main():
