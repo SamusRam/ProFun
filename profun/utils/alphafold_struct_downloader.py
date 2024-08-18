@@ -36,7 +36,10 @@ def parse_args() -> argparse.Namespace:
     return args
 
 
-if __name__ == "__main__":
+def main():
+    """
+    This function downloads protein structures predicted by AlphaFold
+    """
     cl_args = parse_args()
     root_af = Path(cl_args.structures_output_path)
     if not root_af.exists():
@@ -59,3 +62,7 @@ if __name__ == "__main__":
 
     with Pool(processes=cl_args.n_jobs) as pool:
         pool.map(download_af_struct, all_ids_of_interest)
+
+
+if __name__ == "__main__":
+    main()
