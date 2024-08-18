@@ -45,7 +45,7 @@ def download_af_struct(uniprot_id, root_af, fails_count=0, max_fails_count=3):
     except:
         logger.warning(f"Error downloading AlphaFold2 structure for {uniprot_id}")
         if fails_count < max_fails_count:
-            download_af_struct(uniprot_id, fails_count+1)
+            download_af_struct(uniprot_id, root_af, fails_count+1)
 
 
 def main():
