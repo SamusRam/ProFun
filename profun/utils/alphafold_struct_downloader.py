@@ -3,6 +3,7 @@
 import argparse
 import logging
 from pathlib import Path
+from functools import partial
 
 import requests
 from multiprocessing import Pool
